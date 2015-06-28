@@ -4,16 +4,16 @@
 #include <pb_message_update.h>
 
 
-struct FieldHandlerBase {
+struct FieldValidatorBase {
     virtual int8_t set_tag(uint8_t level, uint8_t value) = 0;
-    virtual bool __validate__(void *a, void *b, size_t data_size) = 0;
+    virtual bool __validate__(void *source, void *target, size_t data_size) = 0;
     virtual bool match(MessageUpdateBase::Parent *parents, size_t parent_count,
                        pb_field_iter_t &iter) = 0;
 };
 
 
 template <typename T, uint8_t Level=1>
-struct ScalarFieldHandler : public FieldHandlerBase {
+struct ScalarFieldValidator : public FieldValidatorBase {
   uint8_t tags_[Level];
 
   virtual int8_t set_tag(uint8_t level, uint8_t value) {
@@ -38,34 +38,34 @@ struct ScalarFieldHandler : public FieldHandlerBase {
     LOG("  match\n");
     return true;
   }
-  bool __validate__(void *a, void *b, size_t data_size) {
+  bool __validate__(void *source, void *target, size_t data_size) {
       if (data_size != sizeof(T)) {
           LOG("  **Incorrect size: data_size=%d, expected arg size=%d\n",
               data_size, sizeof(T));
           return false;
       }
-      T &a_ = *((T *)a);
-      T &b_ = *((T *)b);
-      return this->validate(a_, b_);
+      T &source_ = *((T *)source);
+      T &target_ = *((T *)target);
+      return (*this)(source_, target_);
   }
-  virtual bool validate(T &a, T &b) = 0;
+  virtual bool operator()(T &source, T target) = 0;
 };
 
 
-template <uint8_t HandlerCount>
-struct FieldValidator : public MessageUpdateBase {
+template <uint8_t ValidatorCount>
+struct MessageValidator : public MessageUpdateBase {
   using MessageUpdateBase::IterPair;
 
-  FieldHandlerBase *handlers[HandlerCount];
+  FieldValidatorBase *validators[ValidatorCount];
 
-  FieldValidator<HandlerCount> () : MessageUpdateBase() {
-    for (int i = 0; i < HandlerCount; i++) { handlers[i] = NULL; }
+  MessageValidator<ValidatorCount> () : MessageUpdateBase() {
+    for (int i = 0; i < ValidatorCount; i++) { validators[i] = NULL; }
   }
 
-  virtual uint8_t register_handler(FieldHandlerBase &handler) {
-    for (int i = 0; i < HandlerCount; i++) {
-      if (handlers[i] == NULL) {
-        handlers[i] = &handler;
+  virtual uint8_t register_validator(FieldValidatorBase &validator) {
+    for (int i = 0; i < ValidatorCount; i++) {
+      if (validators[i] == NULL) {
+        validators[i] = &validator;
         return i;
       }
     }
@@ -75,14 +75,14 @@ struct FieldValidator : public MessageUpdateBase {
   virtual bool process_field(IterPair &iter, pb_size_t count) {
     LOG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
     bool trigger_copy = false;
-    for (int i = 0; i < sizeof(handlers) / sizeof(FieldHandlerBase *); i++) {
+    for (int i = 0; i < sizeof(validators) / sizeof(FieldValidatorBase *); i++) {
       /* If `count==0` field is not set in source message. */
-      if (count > 0 && handlers[i] != NULL &&
-          handlers[i]->match(parents, parent_count, iter.source)) {
+      if (count > 0 && validators[i] != NULL &&
+          validators[i]->match(parents, parent_count, iter.source)) {
         LOG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
-        trigger_copy = handlers[i]->__validate__(iter.source.pData,
-                                                 iter.target.pData,
-                                                 iter.source.pos->data_size);
+        trigger_copy = validators[i]->__validate__(iter.source.pData,
+                                                   iter.target.pData,
+                                                   iter.source.pos->data_size);
       }
     }
 #ifdef LOGGING
