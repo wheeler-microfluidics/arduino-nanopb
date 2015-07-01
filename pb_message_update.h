@@ -49,10 +49,10 @@ private:
 
     /* Load the count of the data for the current field in the source
       * structure. */
-    if (PB_HTYPE(type) == PB_HTYPE_OPTIONAL) {
-      count = *(bool*)iter.pSize;
+    if (PB_HTYPE(type) == PB_HTYPE_OPTIONAL && *(bool*)(iter.pSize)) {
+      count = 1;
     } else if (PB_HTYPE(type) == PB_HTYPE_REPEATED) {
-      count = *(pb_size_t*)iter.pSize;
+      count = *(pb_size_t*)(iter.pSize);
     } else if (PB_HTYPE(type) == PB_HTYPE_REQUIRED) {
       count = 1;
     }

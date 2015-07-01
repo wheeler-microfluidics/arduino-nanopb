@@ -75,6 +75,7 @@ struct MessageValidator : public MessageUpdateBase {
   virtual bool process_field(IterPair &iter, pb_size_t count) {
     LOG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
     bool trigger_copy = false;
+    bool has_validator = false;
     for (int i = 0; i < sizeof(validators) / sizeof(FieldValidatorBase *); i++) {
       /* If `count==0` field is not set in source message. */
       if (count > 0 && validators[i] != NULL &&
@@ -83,7 +84,14 @@ struct MessageValidator : public MessageUpdateBase {
         trigger_copy = validators[i]->__validate__(iter.source.pData,
                                                    iter.target.pData,
                                                    iter.source.pos->data_size);
+        has_validator = true;
       }
+    }
+    if (!has_validator && (PB_LTYPE(iter.source.pos->type)
+                           != PB_LTYPE_SUBMESSAGE)) {
+      /* Only copy all data for field if this is not a sub-message type, since
+       * we want to handle sub-message fields one-by-one. */
+      trigger_copy = (count > 0);
     }
 #ifdef LOGGING
     for (int i = 0; i < parent_count; i++) LOG("  ");
@@ -103,11 +111,8 @@ struct MessageValidator : public MessageUpdateBase {
     for (int i = 0; i < parent_count; i++) LOG("  ");
     LOG("-----------------------------------------");
 
-    if (PB_LTYPE(iter.source.pos->type) != PB_LTYPE_SUBMESSAGE) {
-      /* Only copy all data for field if this is not a sub-message type, since
-       * we want to handle sub-message fields one-by-one. */
-      trigger_copy = (count > 0);
-    }
+#endif
+#ifdef LOGGING
     LOG("%c\n", (trigger_copy) ? 'W' : ' ');
 #endif
     return trigger_copy;
