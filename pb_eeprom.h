@@ -8,7 +8,10 @@
 /* Older versions of `avr-gcc` (like the one included with Arduino IDE 1.0.5)
  * do not include the `eeprom_update_block` function. Use `eeprom_write_block`
  * instead. */
-#define eeprom_write_block eeprom_update_block
+static __inline__ void
+eeprom_update_block (const void *__src, void *__dst, size_t __n) {
+  eeprom_write_block(__src, __dst, __n);
+}
 #endif
 
 
