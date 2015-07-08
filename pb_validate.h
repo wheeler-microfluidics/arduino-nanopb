@@ -19,6 +19,7 @@ struct ScalarFieldValidator : public FieldValidatorBase {
   virtual int8_t set_tag(uint8_t level, uint8_t value) {
     if (level > Level) { return -1; }
     this->tags_[level] = value;
+    return 0;
   }
 
   bool match(MessageUpdateBase::Parent *parents, size_t parent_count,
