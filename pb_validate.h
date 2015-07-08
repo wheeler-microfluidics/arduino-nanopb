@@ -77,7 +77,7 @@ struct MessageValidator : public MessageUpdateBase {
     LOG(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\n");
     bool trigger_copy = false;
     bool has_validator = false;
-    for (int i = 0; i < sizeof(validators) / sizeof(FieldValidatorBase *); i++) {
+    for (int i = 0; i < ValidatorCount; i++) {
       /* If `count==0` field is not set in source message. */
       if (count > 0 && validators[i] != NULL &&
           validators[i]->match(parents, parent_count, iter.source)) {
